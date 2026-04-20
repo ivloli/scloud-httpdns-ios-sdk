@@ -8,8 +8,8 @@ final class ResolveHostService {
     private let shouldBypassHttpDns: (String) -> Bool
     private let fallbackResult: (String) -> ScloudHTTPDNSResult
     private let toPublicResult: (ResolveItem, Bool) -> ScloudHTTPDNSResult
-    private let requestResolve: (String, ScloudRequestIpType) throws -> ScloudHTTPDNSResult
-    private let triggerResolveInBackground: (String, ScloudRequestIpType) -> Void
+    private let requestResolve: (String, ScloudRequestIpType, String) throws -> ScloudHTTPDNSResult
+    private let triggerResolveInBackground: (String, ScloudRequestIpType, String) -> Void
     private let log: (String) -> Void
 
     init(
@@ -20,8 +20,8 @@ final class ResolveHostService {
         shouldBypassHttpDns: @escaping (String) -> Bool,
         fallbackResult: @escaping (String) -> ScloudHTTPDNSResult,
         toPublicResult: @escaping (ResolveItem, Bool) -> ScloudHTTPDNSResult,
-        requestResolve: @escaping (String, ScloudRequestIpType) throws -> ScloudHTTPDNSResult,
-        triggerResolveInBackground: @escaping (String, ScloudRequestIpType) -> Void,
+        requestResolve: @escaping (String, ScloudRequestIpType, String) throws -> ScloudHTTPDNSResult,
+        triggerResolveInBackground: @escaping (String, ScloudRequestIpType, String) -> Void,
         log: @escaping (String) -> Void
     ) {
         self.queue = queue
@@ -48,13 +48,19 @@ final class ResolveHostService {
         let now = nowMillis()
         if let cached = cache.get(host: normalizedHost, type: requestIpType), (!cached.isExpired(nowMillis: now) || getConfig().enableExpiredIp) {
             if cached.isExpired(nowMillis: now) {
-                triggerResolveInBackground(normalizedHost, requestIpType)
+                log("source=sync cache hit expired host=\(normalizedHost) type=\(requestIpType.rawValue) ttl=\(cached.item.ttl)")
+                log("source=sync cache refresh in background host=\(normalizedHost) type=\(requestIpType.rawValue)")
+                triggerResolveInBackground(normalizedHost, requestIpType, "sync-expired")
+            } else {
+                log("source=sync cache hit host=\(normalizedHost) type=\(requestIpType.rawValue) ttl=\(cached.item.ttl)")
             }
             return toPublicResult(cached.item, cached.isExpired(nowMillis: now))
         }
 
+        log("source=sync cache miss host=\(normalizedHost) type=\(requestIpType.rawValue)")
+
         do {
-            return try requestResolve(normalizedHost, requestIpType)
+            return try requestResolve(normalizedHost, requestIpType, "sync")
         } catch {
             log("sync resolve failed host=\(normalizedHost) type=\(requestIpType.rawValue): \(error.localizedDescription)")
             return fallbackResult(normalizedHost)
@@ -67,7 +73,15 @@ final class ResolveHostService {
         callback: @escaping (ScloudHTTPDNSResult) -> Void
     ) {
         queue.async {
-            let result = self.getHttpDnsResultForHostSync(host, requestIpType: requestIpType)
+            guard let normalizedHost = self.normalizeHost(host) else {
+                callback(self.fallbackResult(host))
+                return
+            }
+            if self.shouldBypassHttpDns(normalizedHost) {
+                callback(self.fallbackResult(normalizedHost))
+                return
+            }
+            let result = (try? self.requestResolve(normalizedHost, requestIpType, "async")) ?? self.fallbackResult(normalizedHost)
             callback(result)
         }
     }
@@ -83,12 +97,17 @@ final class ResolveHostService {
         let now = nowMillis()
         if let cached = cache.get(host: normalizedHost, type: requestIpType), (!cached.isExpired(nowMillis: now) || getConfig().enableExpiredIp) {
             if cached.isExpired(nowMillis: now) {
-                triggerResolveInBackground(normalizedHost, requestIpType)
+                log("source=nonblocking cache hit expired host=\(normalizedHost) type=\(requestIpType.rawValue) ttl=\(cached.item.ttl)")
+                log("source=nonblocking cache refresh in background host=\(normalizedHost) type=\(requestIpType.rawValue)")
+                triggerResolveInBackground(normalizedHost, requestIpType, "nonblocking-expired")
+            } else {
+                log("source=nonblocking cache hit host=\(normalizedHost) type=\(requestIpType.rawValue) ttl=\(cached.item.ttl)")
             }
             return toPublicResult(cached.item, cached.isExpired(nowMillis: now))
         }
 
-        triggerResolveInBackground(normalizedHost, requestIpType)
+        log("source=nonblocking cache miss host=\(normalizedHost) type=\(requestIpType.rawValue)")
+        triggerResolveInBackground(normalizedHost, requestIpType, "nonblocking")
         return fallbackResult(normalizedHost)
     }
 
@@ -98,7 +117,10 @@ final class ResolveHostService {
         for host in normalized {
             let cached = cache.get(host: host, type: requestIpType)
             if cached == nil || cached?.isExpired(nowMillis: now) == true {
-                triggerResolveInBackground(host, requestIpType)
+                log("source=preResolve schedule host=\(host) type=\(requestIpType.rawValue)")
+                triggerResolveInBackground(host, requestIpType, "preResolve")
+            } else if let cached {
+                log("source=preResolve skip cache-hit host=\(host) type=\(requestIpType.rawValue) ttl=\(cached.item.ttl)")
             }
         }
     }

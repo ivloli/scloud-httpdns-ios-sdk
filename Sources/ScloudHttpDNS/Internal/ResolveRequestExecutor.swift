@@ -27,7 +27,7 @@ final class ResolveRequestExecutor {
         self.log = log
     }
 
-    func requestResolve(host: String, requestIpType: ScloudRequestIpType) throws -> ScloudHTTPDNSResult {
+    func requestResolve(host: String, requestIpType: ScloudRequestIpType, source: String) throws -> ScloudHTTPDNSResult {
         let config = getConfig()
         let aesBytes = try config.aesSecretKeyBytesForResolve()
         let query = try RequestAdapter.buildResolvePath(
@@ -45,7 +45,8 @@ final class ResolveRequestExecutor {
             query: query,
             aesBytes: aesBytes,
             endpoints: endpointsRound1,
-            logPrefix: "resolve"
+            logPrefix: "resolve",
+            source: source
         ) {
             return result
         }
@@ -67,7 +68,8 @@ final class ResolveRequestExecutor {
             query: query,
             aesBytes: aesBytes,
             endpoints: endpointsRound2,
-            logPrefix: "resolve retry"
+            logPrefix: "resolve retry",
+            source: source
         ) {
             return result
         }
@@ -81,7 +83,8 @@ final class ResolveRequestExecutor {
         query: String,
         aesBytes: Data,
         endpoints: [ResolveEndpoint],
-        logPrefix: String
+        logPrefix: String,
+        source: String
     ) throws -> ScloudHTTPDNSResult? {
         let config = getConfig()
         for endpoint in endpoints {
@@ -104,6 +107,7 @@ final class ResolveRequestExecutor {
                 )
                 dispatchService.markEndpointSucceeded(endpoint)
                 cache.put(host: host, type: requestIpType, item: item, nowMillis: nowMillis())
+                log("source=\(source) cache write host=\(host) type=\(requestIpType.rawValue) ttl=\(item.ttl) v4=\(item.ipsV4.count) v6=\(item.ipsV6.count)")
                 return toPublicResult(item, false)
             } catch {
                 log("\(logPrefix) failed host=\(endpoint.host) ip=\(endpoint.connectIp ?? "<dns>"): \(error.localizedDescription)")

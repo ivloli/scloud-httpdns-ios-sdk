@@ -61,14 +61,14 @@ final class DefaultScloudHttpDnsService: ScloudHttpDnsService {
                     expired: expired
                 )
             },
-            requestResolve: { [weak self] host, type in
+            requestResolve: { [weak self] host, type, source in
                 guard let self else {
                     return ScloudHTTPDNSResult(host: host, ips: [], ipv6s: [], extras: [:], ttl: 0, expired: true)
                 }
-                return try self.requestResolve(host: host, requestIpType: type)
+                return try self.requestResolve(host: host, requestIpType: type, source: source)
             },
-            triggerResolveInBackground: { [weak self] host, type in
-                self?.triggerResolveInBackground(host: host, requestIpType: type)
+            triggerResolveInBackground: { [weak self] host, type, source in
+                self?.triggerResolveInBackground(host: host, requestIpType: type, source: source)
             },
             log: { [weak self] message in self?.log(message) }
         )
@@ -115,7 +115,7 @@ final class DefaultScloudHttpDnsService: ScloudHttpDnsService {
         cache.clearHosts(hosts.compactMap(normalizeHost))
     }
 
-    private func triggerResolveInBackground(host: String, requestIpType: ScloudRequestIpType) {
+    private func triggerResolveInBackground(host: String, requestIpType: ScloudRequestIpType, source: String) {
         let key = inFlightKey(host: host, requestIpType: requestIpType)
         stateLock.lock()
         if inFlightResolveKeys.contains(key) {
@@ -131,12 +131,12 @@ final class DefaultScloudHttpDnsService: ScloudHttpDnsService {
                 self?.inFlightResolveKeys.remove(key)
                 self?.stateLock.unlock()
             }
-            _ = try? self?.requestResolve(host: host, requestIpType: requestIpType)
+            _ = try? self?.requestResolve(host: host, requestIpType: requestIpType, source: source)
         }
     }
 
-    private func requestResolve(host: String, requestIpType: ScloudRequestIpType) throws -> ScloudHTTPDNSResult {
-        return try resolveRequestExecutor.requestResolve(host: host, requestIpType: requestIpType)
+    private func requestResolve(host: String, requestIpType: ScloudRequestIpType, source: String) throws -> ScloudHTTPDNSResult {
+        return try resolveRequestExecutor.requestResolve(host: host, requestIpType: requestIpType, source: source)
     }
 
     private func normalizeHost(_ host: String) -> String? {
