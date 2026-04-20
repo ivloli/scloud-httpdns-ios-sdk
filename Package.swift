@@ -2,20 +2,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "AlicloudHTTPDNS",
+    name: "ScloudHTTPDNS",
     platforms: [
         .iOS(.v13),
         .macOS(.v10_15)
     ],
     products: [
         .library(
-            name: "AlicloudHTTPDNS",
-            targets: ["AlicloudHTTPDNS"]
+            name: "ScloudHTTPDNS",
+            targets: ["ScloudHTTPDNS"]
         )
     ],
     targets: [
         .target(
-            name: "AlicloudHTTPDNS",
+            name: "ScloudHTTPDNS",
             path: "Sources/ScloudHttpDNS"
         )
     ]

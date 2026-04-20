@@ -13,6 +13,22 @@ import Foundation
     case both = 3
 }
 
+@objc public protocol HttpdnsLogger: AnyObject {
+    func log(_ message: String)
+}
+
+private final class HttpdnsLoggerAdapter: ScloudLogger {
+    weak var logger: HttpdnsLogger?
+
+    init(logger: HttpdnsLogger?) {
+        self.logger = logger
+    }
+
+    func log(_ message: String) {
+        logger?.log(message)
+    }
+}
+
 @objcMembers
 public final class HttpdnsRequest: NSObject {
     public var host: String
@@ -84,6 +100,7 @@ public final class HttpDnsService: NSObject {
 
     public let accountID: String
     private var config: ScloudInitConfig
+    private var loggerAdapter: HttpdnsLoggerAdapter?
 
     @discardableResult
     public init(accountID: String, aesSecretKey: String) {
@@ -157,6 +174,18 @@ public final class HttpDnsService: NSObject {
     public func setNetworkingTimeoutInterval(_ timeoutInterval: TimeInterval) {
         let millis = Int(timeoutInterval * 1000)
         config.timeoutMillis = max(100, min(millis, 5000))
+        reloadConfig()
+    }
+
+    public func setLogger(_ logger: HttpdnsLogger?) {
+        if let logger {
+            let adapter = HttpdnsLoggerAdapter(logger: logger)
+            loggerAdapter = adapter
+            config.logger = adapter
+        } else {
+            loggerAdapter = nil
+            config.logger = nil
+        }
         reloadConfig()
     }
 
