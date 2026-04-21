@@ -103,9 +103,14 @@ public final class HttpDnsService: NSObject {
     private var loggerAdapter: HttpdnsLoggerAdapter?
 
     @discardableResult
-    public init(accountID: String, aesSecretKey: String) {
+    public init(accountID: String, aesSecretKey: String, logger: HttpdnsLogger? = nil) {
         self.accountID = accountID
         self.config = ScloudInitConfig(aesSecretKey: aesSecretKey)
+        if let logger {
+            let adapter = HttpdnsLoggerAdapter(logger: logger)
+            self.loggerAdapter = adapter
+            self.config.logger = adapter
+        }
         super.init()
         ScloudHttpDns.initialize(accountId: accountID, config: config)
         HttpDnsService.lock.lock()
@@ -116,14 +121,25 @@ public final class HttpDnsService: NSObject {
     @discardableResult
     @objc(initWithAccountID:aesSecretKey:)
     public static func initWithAccountID(_ accountID: String, aesSecretKey: String) -> HttpDnsService {
+        return initWithAccountID(accountID, aesSecretKey: aesSecretKey, logger: nil)
+    }
+
+    @discardableResult
+    public static func initWithAccountID(_ accountID: String, aesSecretKey: String, logger: HttpdnsLogger?) -> HttpDnsService {
         lock.lock()
-        defer { lock.unlock() }
         if let existing = instances[accountID] {
             existing.config.aesSecretKey = aesSecretKey
+            if let logger {
+                let adapter = HttpdnsLoggerAdapter(logger: logger)
+                existing.loggerAdapter = adapter
+                existing.config.logger = adapter
+            }
             ScloudHttpDns.initialize(accountId: accountID, config: existing.config)
+            lock.unlock()
             return existing
         }
-        return HttpDnsService(accountID: accountID, aesSecretKey: aesSecretKey)
+        lock.unlock()
+        return HttpDnsService(accountID: accountID, aesSecretKey: aesSecretKey, logger: logger)
     }
 
     @objc(getInstanceByAccountId:)

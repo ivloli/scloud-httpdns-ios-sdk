@@ -11,12 +11,23 @@ let package = Package(
         .library(
             name: "ScloudHTTPDNS",
             targets: ["ScloudHTTPDNS"]
+        ),
+        .executable(
+            name: "ScloudHTTPDNSDemo",
+            targets: ["ScloudHTTPDNSDemo"]
         )
     ],
     targets: [
         .target(
             name: "ScloudHTTPDNS",
             path: "Sources/ScloudHttpDNS"
+        ),
+        .executableTarget(
+            name: "ScloudHTTPDNSDemo",
+            dependencies: [
+                .target(name: "ScloudHTTPDNS")
+            ],
+            path: "Sources/ScloudHTTPDNSDemo"
         )
     ]
 )

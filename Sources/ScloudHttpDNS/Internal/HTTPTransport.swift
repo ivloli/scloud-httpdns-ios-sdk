@@ -57,7 +57,11 @@ final class HTTPTransport {
             semaphore.signal()
         }
         task.resume()
-        semaphore.wait()
+        let waitResult = semaphore.wait(timeout: .now() + .milliseconds(timeoutMillis + 200))
+        if waitResult == .timedOut {
+            task.cancel()
+            throw ScloudError.network("request timeout")
+        }
 
         if let responseError {
             throw responseError
