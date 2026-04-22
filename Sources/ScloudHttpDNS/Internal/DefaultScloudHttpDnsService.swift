@@ -61,6 +61,10 @@ final class DefaultScloudHttpDnsService: ScloudHttpDnsService {
                     expired: expired
                 )
             },
+            requestResolveBatch: { [weak self] hosts, type, source in
+                guard let self else { return }
+                try self.resolveRequestExecutor.requestResolveBatch(hosts: hosts, requestIpType: type, source: source)
+            },
             requestResolve: { [weak self] host, type, source in
                 guard let self else {
                     return ScloudHTTPDNSResult(host: host, ips: [], ipv6s: [], extras: [:], ttl: 0, expired: true)
@@ -95,6 +99,10 @@ final class DefaultScloudHttpDnsService: ScloudHttpDnsService {
         return resolveHostService.getHttpDnsResultForHostSync(host, requestIpType: requestIpType)
     }
 
+    func getHttpDnsResultForHostSync(_ hostList: [String], requestIpType: ScloudRequestIpType) -> [ScloudHTTPDNSResult] {
+        return resolveHostService.getHttpDnsResultForHostSync(hostList, requestIpType: requestIpType)
+    }
+
     func getHttpDnsResultForHostAsync(
         _ host: String,
         requestIpType: ScloudRequestIpType,
@@ -103,8 +111,20 @@ final class DefaultScloudHttpDnsService: ScloudHttpDnsService {
         resolveHostService.getHttpDnsResultForHostAsync(host, requestIpType: requestIpType, callback: callback)
     }
 
+    func getHttpDnsResultForHostAsync(
+        _ hostList: [String],
+        requestIpType: ScloudRequestIpType,
+        callback: @escaping ([ScloudHTTPDNSResult]) -> Void
+    ) {
+        resolveHostService.getHttpDnsResultForHostAsync(hostList, requestIpType: requestIpType, callback: callback)
+    }
+
     func getHttpDnsResultForHostSyncNonBlocking(_ host: String, requestIpType: ScloudRequestIpType) -> ScloudHTTPDNSResult {
         return resolveHostService.getHttpDnsResultForHostSyncNonBlocking(host, requestIpType: requestIpType)
+    }
+
+    func getHttpDnsResultForHostSyncNonBlocking(_ hostList: [String], requestIpType: ScloudRequestIpType) -> [ScloudHTTPDNSResult] {
+        return resolveHostService.getHttpDnsResultForHostSyncNonBlocking(hostList, requestIpType: requestIpType)
     }
 
     func cleanHostCache(_ hosts: [String]?) {

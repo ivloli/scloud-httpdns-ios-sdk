@@ -6,13 +6,17 @@ enum RequestAdapter {
         aesSecretKeyBytes: Data,
         host: String,
         requestIpType: ScloudRequestIpType,
-        expEpochSeconds: Int64
+        expEpochSeconds: Int64,
+        clientIp: String?
     ) throws -> String {
-        let plain: [String: Any] = [
+        var plain: [String: Any] = [
             "exp": expEpochSeconds,
             "dn": host,
             "q": requestIpType.queryValue
         ]
+        if let clientIp, !clientIp.isEmpty {
+            plain["cip"] = clientIp
+        }
         let payload = try jsonString(plain)
         let enc = try Crypto.encryptToHex(aesKey: aesSecretKeyBytes, plaintext: payload)
         return "/v1/d?id=\(url(accountId))&enc=\(url(enc))"

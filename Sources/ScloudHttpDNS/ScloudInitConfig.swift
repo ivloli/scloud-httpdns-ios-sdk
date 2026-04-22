@@ -23,6 +23,7 @@ struct ScloudInitConfig {
     var resolveHostOverride: String?
     var resolveConnectIpOverride: String?
     var resolvePortOverride: Int?
+    var clientIp: String?
     weak var cacheTtlChanger: ScloudCacheTtlChanger?
     weak var notUseHttpDnsFilter: ScloudNotUseHttpDnsFilter?
     weak var logger: ScloudLogger?
@@ -38,12 +39,14 @@ struct ScloudInitConfig {
         resolveHostOverride: String? = nil,
         resolveConnectIpOverride: String? = nil,
         resolvePortOverride: Int? = nil,
+        clientIp: String? = nil,
         cacheTtlChanger: ScloudCacheTtlChanger? = nil,
         notUseHttpDnsFilter: ScloudNotUseHttpDnsFilter? = nil,
         logger: ScloudLogger? = nil
     ) {
         let normalizedHostOverride = resolveHostOverride?.trimmedNilIfEmpty
         let normalizedConnectIpOverride = resolveConnectIpOverride?.trimmedNilIfEmpty
+        let normalizedClientIp = clientIp?.trimmedNilIfEmpty
         if normalizedConnectIpOverride != nil {
             precondition(normalizedHostOverride != nil, "resolveHostOverride is required when resolveConnectIpOverride is set")
         }
@@ -61,6 +64,7 @@ struct ScloudInitConfig {
         self.resolveHostOverride = normalizedHostOverride
         self.resolveConnectIpOverride = normalizedConnectIpOverride
         self.resolvePortOverride = resolvePortOverride
+        self.clientIp = normalizedClientIp
         self.cacheTtlChanger = cacheTtlChanger
         self.notUseHttpDnsFilter = notUseHttpDnsFilter
         self.logger = logger

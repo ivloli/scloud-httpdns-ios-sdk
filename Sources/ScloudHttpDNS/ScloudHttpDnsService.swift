@@ -3,12 +3,19 @@ import Foundation
 protocol ScloudHttpDnsService: AnyObject {
     func setPreResolveHosts(_ hostList: [String], requestIpType: ScloudRequestIpType)
     func getHttpDnsResultForHostSync(_ host: String, requestIpType: ScloudRequestIpType) -> ScloudHTTPDNSResult
+    func getHttpDnsResultForHostSync(_ hostList: [String], requestIpType: ScloudRequestIpType) -> [ScloudHTTPDNSResult]
     func getHttpDnsResultForHostAsync(
         _ host: String,
         requestIpType: ScloudRequestIpType,
         callback: @escaping (ScloudHTTPDNSResult) -> Void
     )
+    func getHttpDnsResultForHostAsync(
+        _ hostList: [String],
+        requestIpType: ScloudRequestIpType,
+        callback: @escaping ([ScloudHTTPDNSResult]) -> Void
+    )
     func getHttpDnsResultForHostSyncNonBlocking(_ host: String, requestIpType: ScloudRequestIpType) -> ScloudHTTPDNSResult
+    func getHttpDnsResultForHostSyncNonBlocking(_ hostList: [String], requestIpType: ScloudRequestIpType) -> [ScloudHTTPDNSResult]
     func cleanHostCache(_ hosts: [String]?)
 }
 
@@ -21,11 +28,39 @@ extension ScloudHttpDnsService {
         return getHttpDnsResultForHostSync(host, requestIpType: .v4)
     }
 
+    func getHttpDnsResultForHostSync(_ hostList: [String], requestIpType: ScloudRequestIpType) -> [ScloudHTTPDNSResult] {
+        return hostList.map { getHttpDnsResultForHostSync($0, requestIpType: requestIpType) }
+    }
+
+    func getHttpDnsResultForHostSync(_ hostList: [String]) -> [ScloudHTTPDNSResult] {
+        return getHttpDnsResultForHostSync(hostList, requestIpType: .v4)
+    }
+
     func getHttpDnsResultForHostAsync(_ host: String, callback: @escaping (ScloudHTTPDNSResult) -> Void) {
         getHttpDnsResultForHostAsync(host, requestIpType: .v4, callback: callback)
     }
 
+    func getHttpDnsResultForHostAsync(_ hostList: [String], callback: @escaping ([ScloudHTTPDNSResult]) -> Void) {
+        getHttpDnsResultForHostAsync(hostList, requestIpType: .v4, callback: callback)
+    }
+
+    func getHttpDnsResultForHostAsync(
+        _ hostList: [String],
+        requestIpType: ScloudRequestIpType,
+        callback: @escaping ([ScloudHTTPDNSResult]) -> Void
+    ) {
+        callback(getHttpDnsResultForHostSync(hostList, requestIpType: requestIpType))
+    }
+
     func getHttpDnsResultForHostSyncNonBlocking(_ host: String) -> ScloudHTTPDNSResult {
         return getHttpDnsResultForHostSyncNonBlocking(host, requestIpType: .v4)
+    }
+
+    func getHttpDnsResultForHostSyncNonBlocking(_ hostList: [String], requestIpType: ScloudRequestIpType) -> [ScloudHTTPDNSResult] {
+        return hostList.map { getHttpDnsResultForHostSyncNonBlocking($0, requestIpType: requestIpType) }
+    }
+
+    func getHttpDnsResultForHostSyncNonBlocking(_ hostList: [String]) -> [ScloudHTTPDNSResult] {
+        return getHttpDnsResultForHostSyncNonBlocking(hostList, requestIpType: .v4)
     }
 }

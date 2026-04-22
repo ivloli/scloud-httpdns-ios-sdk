@@ -37,6 +37,7 @@ func parseHosts(_ raw: String) -> [String] {
 let hostsRaw = env("TEST_HOSTS", env("TEST_HOST", "www.baidu.com"))
 let hosts = parseHosts(hostsRaw)
 let testHost = hosts.first ?? "www.baidu.com"
+let clientIp = env("CLIENT_IP")
 
 guard !accountId.isEmpty, !aesKey.isEmpty else {
     print("ERROR: set ACCOUNT_ID and AES_KEY first")
@@ -49,8 +50,11 @@ print("HTTPDNS init start")
 let service = HttpDnsService.initWithAccountID(accountId, aesSecretKey: aesKey, logger: DemoLogger())
 print("HTTPDNS init done")
 service.setPersistentCacheIPEnabled(true)
+if !clientIp.isEmpty {
+    service.setClientIp(clientIp)
+}
 
-print("HTTPDNS config ready: https=<default>, cache=true, hostOverride=<none>")
+print("HTTPDNS config ready: https=<default>, cache=true, hostOverride=<none>, clientIp=\(clientIp.isEmpty ? "<none>" : clientIp)")
 print("HTTPDNS test hosts=\(hosts)")
 print("HTTPDNS begin all sdk methods")
 
@@ -70,6 +74,11 @@ printResult("sync-both-cache-hit", syncBothCacheHit)
 let syncDefault = service.getHttpDnsResultForHostSync(testHost)
 printResult("sync-default", syncDefault)
 
+let syncBatchBoth = service.getHttpDnsResultForHostSync(hosts, byIPType: .both)
+for (idx, item) in syncBatchBoth.enumerated() {
+    printResult("sync-batch-both[\(idx)]", item)
+}
+
 let sem1 = DispatchSemaphore(value: 0)
 service.getHttpDnsResultForHostAsync(testHost, byIPType: .ipv4) { result in
     printResult("async-v4-callback", result)
@@ -84,6 +93,15 @@ service.getHttpDnsResultForHostAsync(testHost) { result in
 }
 _ = sem2.wait(timeout: .now() + 15)
 
+let sem3 = DispatchSemaphore(value: 0)
+service.getHttpDnsResultForHostAsync(hosts, byIPType: .both) { results in
+    for (idx, item) in results.enumerated() {
+        printResult("async-batch-both-callback[\(idx)]", item)
+    }
+    sem3.signal()
+}
+_ = sem3.wait(timeout: .now() + 15)
+
 let nonblockingBoth = service.getHttpDnsResultForHostSyncNonBlocking(testHost, byIPType: .both)
 printResult("nonblocking-both", nonblockingBoth)
 
@@ -92,6 +110,11 @@ printResult("nonblocking-both-cache-hit", nonblockingBothCacheHit)
 
 let nonblockingDefault = service.getHttpDnsResultForHostSyncNonBlocking(testHost)
 printResult("nonblocking-default", nonblockingDefault)
+
+let nonblockingBatchBoth = service.getHttpDnsResultForHostSyncNonBlocking(hosts, byIPType: .both)
+for (idx, item) in nonblockingBatchBoth.enumerated() {
+    printResult("nonblocking-batch-both[\(idx)]", item)
+}
 
 service.cleanHostCache([testHost])
 service.cleanHostCache(nil)

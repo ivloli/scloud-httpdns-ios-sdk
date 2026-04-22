@@ -210,6 +210,14 @@ public final class HttpDnsService: NSObject {
         reloadConfig()
     }
 
+    public func setClientIp(_ clientIp: String?) {
+        config.clientIp = clientIp?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if config.clientIp?.isEmpty == true {
+            config.clientIp = nil
+        }
+        reloadConfig()
+    }
+
     public func setCachedIPEnabled(_ enable: Bool) {
         setPersistentCacheIPEnabled(enable)
     }
@@ -245,8 +253,18 @@ public final class HttpDnsService: NSObject {
         return HttpdnsResult(service().getHttpDnsResultForHostSync(host, requestIpType: .v4))
     }
 
+    @nonobjc
+    public func getHttpDnsResultForHostSync(_ hostList: [String]) -> [HttpdnsResult] {
+        return service().getHttpDnsResultForHostSync(hostList, requestIpType: .v4).map(HttpdnsResult.init)
+    }
+
     public func getHttpDnsResultForHostSync(_ host: String, byIPType ipType: HttpdnsQueryIPType) -> HttpdnsResult {
         return HttpdnsResult(service().getHttpDnsResultForHostSync(host, requestIpType: ipType.toInternal()))
+    }
+
+    @nonobjc
+    public func getHttpDnsResultForHostSync(_ hostList: [String], byIPType ipType: HttpdnsQueryIPType) -> [HttpdnsResult] {
+        return service().getHttpDnsResultForHostSync(hostList, requestIpType: ipType.toInternal()).map(HttpdnsResult.init)
     }
 
     @objc(getHttpDnsResultForHostSync:queryIPType:)
@@ -281,9 +299,23 @@ public final class HttpDnsService: NSObject {
         }
     }
 
+    @nonobjc
+    public func getHttpDnsResultForHostAsync(_ hostList: [String], completion: @escaping ([HttpdnsResult]) -> Void) {
+        service().getHttpDnsResultForHostAsync(hostList, requestIpType: .v4) { results in
+            completion(results.map(HttpdnsResult.init))
+        }
+    }
+
     public func getHttpDnsResultForHostAsync(_ host: String, byIPType ipType: HttpdnsQueryIPType, completion: @escaping (HttpdnsResult) -> Void) {
         service().getHttpDnsResultForHostAsync(host, requestIpType: ipType.toInternal()) { result in
             completion(HttpdnsResult(result))
+        }
+    }
+
+    @nonobjc
+    public func getHttpDnsResultForHostAsync(_ hostList: [String], byIPType ipType: HttpdnsQueryIPType, completion: @escaping ([HttpdnsResult]) -> Void) {
+        service().getHttpDnsResultForHostAsync(hostList, requestIpType: ipType.toInternal()) { results in
+            completion(results.map(HttpdnsResult.init))
         }
     }
 
@@ -298,8 +330,18 @@ public final class HttpDnsService: NSObject {
         return HttpdnsResult(service().getHttpDnsResultForHostSyncNonBlocking(host, requestIpType: .v4))
     }
 
+    @nonobjc
+    public func getHttpDnsResultForHostSyncNonBlocking(_ hostList: [String]) -> [HttpdnsResult] {
+        return service().getHttpDnsResultForHostSyncNonBlocking(hostList, requestIpType: .v4).map(HttpdnsResult.init)
+    }
+
     public func getHttpDnsResultForHostSyncNonBlocking(_ host: String, byIPType ipType: HttpdnsQueryIPType) -> HttpdnsResult {
         return HttpdnsResult(service().getHttpDnsResultForHostSyncNonBlocking(host, requestIpType: ipType.toInternal()))
+    }
+
+    @nonobjc
+    public func getHttpDnsResultForHostSyncNonBlocking(_ hostList: [String], byIPType ipType: HttpdnsQueryIPType) -> [HttpdnsResult] {
+        return service().getHttpDnsResultForHostSyncNonBlocking(hostList, requestIpType: ipType.toInternal()).map(HttpdnsResult.init)
     }
 
     @objc(getHttpDnsResultForHostSyncNonBlocking:queryIPType:)
